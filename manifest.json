@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "Video Turbo Speed",
+  "version": "1.0",
+  "description": "Acelera qualquer vídeo para 4x ou 8x",
+  "action": {
+    "default_popup": "popup.html"
+  },
+ "content_scripts": [
+  {
+    "matches": ["<all_urls>"],
+    "js": ["content.js"],
+    "run_at": "document_idle"
+  }
+],
+  "permissions": []
+}

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { width: 220px; padding: 15px; font-family: Arial, sans-serif; }
+    h1 { font-size: 18px; margin: 0 0 15px 0; text-align: center; }
+    button {
+      width: 100%;
+      padding: 12px;
+      margin: 8px 0;
+      font-size: 16px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .btn-2x { background: #ffff44; color: white; }
+    .btn-4x { background: #ff4444; color: white; }
+    .btn-8x { background: #cc0000; color: white; }
+    .btn-16x { background: #cc0022; color: white; }
+    .btn-reset { background: #666; color: white; }
+    .status { margin-top: 10px; text-align: center; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <h1>Video Turbo</h1>
+  <button class="btn-2x" id="speed2">2x</button>
+  <button class="btn-4x" id="speed4">4x</button>
+  <button class="btn-8x" id="speed8">8x</button>
+  <button class="btn-16x" id="speed16">16x</button>
+  <button class="btn-reset" id="reset">Voltar ao normal (1x)</button>
+
+  <div class="status" id="status"></div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
