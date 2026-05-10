@@ -8,14 +8,22 @@ function applySpeedToAllMedia(speed) {
   lastSpeed = speed;
 
   const apply = (media) => {
-    if (media) {
+    if (media && typeof media.playbackRate !== 'undefined') {
       media.playbackRate = speed;
       count++;
     }
   };
 
+  // Seletores gerais
   document.querySelectorAll('video, audio').forEach(apply);
 
+  // YouTube Music específico
+  document.querySelectorAll('ytmusic-player video, ytmusic-player audio').forEach(apply);
+
+  // Spotify
+  document.querySelectorAll('audio').forEach(apply); // Spotify usa <audio>
+
+  // Shadow DOM
   function scanShadows(root) {
     if (!root) return;
     root.querySelectorAll('video, audio').forEach(apply);
@@ -23,25 +31,31 @@ function applySpeedToAllMedia(speed) {
   }
   scanShadows(document);
 
-  return { success: count > 0, count, speed, message: `${count} mídias → ${speed}x` };
+  return { 
+    success: count > 0, 
+    count, 
+    speed, 
+    message: `${count} mídias → ${speed}x` 
+  };
 }
 
 // ====================== DOWNLOAD AUTOMÁTICO ======================
 function startAutoRecording(isAudioOnly = false) {
-  const video = document.querySelector('video');
-  if (!video) {
-    return { success: false, message: "Nenhum vídeo reproduzindo encontrado" };
+  // Tenta pegar tanto video quanto audio (Spotify usa audio)
+  let media = document.querySelector('video') || document.querySelector('audio');
+
+  if (!media) {
+    return { success: false, message: "Nenhum player encontrado" };
   }
 
-  // Para gravação anterior se existir
   if (currentRecorder) currentRecorder.stop();
 
   recordedChunks = [];
 
   try {
     const stream = isAudioOnly 
-      ? new MediaStream(video.captureStream().getAudioTracks())
-      : video.captureStream();
+      ? new MediaStream(media.captureStream().getAudioTracks())
+      : media.captureStream();
 
     currentRecorder = new MediaRecorder(stream, { 
       mimeType: 'video/webm;codecs=vp9,opus' 
@@ -53,38 +67,34 @@ function startAutoRecording(isAudioOnly = false) {
 
     currentRecorder.onstop = () => {
       if (recordedChunks.length === 0) return;
-      
       const blob = new Blob(recordedChunks, { type: 'video/webm' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `video_${Date.now()}.${isAudioOnly ? 'mp3' : 'webm'}`;
+      a.download = `music_${Date.now()}.${isAudioOnly ? 'mp3' : 'webm'}`;
       a.click();
       URL.revokeObjectURL(url);
-
-      currentRecorder = null;
     };
 
-    // Inicia gravação
     currentRecorder.start(300);
 
-    // Para automaticamente quando o vídeo terminar
-    video.onended = () => {
-      if (currentRecorder) {
-        setTimeout(() => currentRecorder.stop(), 800); // pequeno delay para pegar o final
-      }
+    // Para automaticamente quando a música acabar
+    media.onended = () => {
+      setTimeout(() => {
+        if (currentRecorder) currentRecorder.stop();
+      }, 1000);
     };
 
     return { 
       success: true, 
       message: isAudioOnly 
-        ? "Gravando áudio... (vai baixar ao final do vídeo)" 
-        : "Gravando vídeo... (vai baixar automaticamente ao final)" 
+        ? "Gravando Áudio... (baixa ao final)" 
+        : "Gravando... (baixa ao final)" 
     };
 
   } catch (err) {
     console.error(err);
-    return { success: false, message: "Erro ao iniciar gravação" };
+    return { success: false, message: "Não foi possível iniciar gravação neste player" };
   }
 }
 
@@ -101,12 +111,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 });
 
-// Observer para velocidade
+// Observer + auto speed
 const observer = new MutationObserver(() => {
   if (lastSpeed !== 1.0) {
-    document.querySelectorAll('video').forEach(v => v.playbackRate = lastSpeed);
+    document.querySelectorAll('video, audio').forEach(m => {
+      if (m.playbackRate !== lastSpeed) m.playbackRate = lastSpeed;
+    });
   }
 });
 observer.observe(document.body, { childList: true, subtree: true });
 
-console.log("Video Turbo + Download Automático carregado");
+console.log("Video Turbo");
