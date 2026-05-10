@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Video Turbo Speed",
-  "version": "1.0",
-  "description": "Acelera qualquer vídeo para 4x ou 8x",
+  "version": "3.0",
+  "description": "Acelera qualquer vídeo para 2,4,8 ou 16x, também reduz pra 0.5x ou 0.250x - baixa vídeo e audio (mp3) by: Fausto Biazzi",
   "action": {
     "default_popup": "popup.html"
   },

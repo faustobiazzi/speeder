@@ -1,29 +1,21 @@
 let lastSpeed = 1.0;
-let currentRecorder = null;
-let recordedChunks = [];
+let recorder = null;
+let chunks = [];
 
-// ====================== SPEED ======================
-function applySpeedToAllMedia(speed) {
-  let count = 0;
+// ====================== VELOCIDADE (independente) ======================
+function applySpeed(speed) {
   lastSpeed = speed;
+  let count = 0;
 
   const apply = (media) => {
-    if (media && typeof media.playbackRate !== 'undefined') {
+    if (media) {
       media.playbackRate = speed;
       count++;
     }
   };
 
-  // Seletores gerais
   document.querySelectorAll('video, audio').forEach(apply);
 
-  // YouTube Music específico
-  document.querySelectorAll('ytmusic-player video, ytmusic-player audio').forEach(apply);
-
-  // Spotify
-  document.querySelectorAll('audio').forEach(apply); // Spotify usa <audio>
-
-  // Shadow DOM
   function scanShadows(root) {
     if (!root) return;
     root.querySelectorAll('video, audio').forEach(apply);
@@ -31,87 +23,91 @@ function applySpeedToAllMedia(speed) {
   }
   scanShadows(document);
 
-  return { 
-    success: count > 0, 
-    count, 
-    speed, 
-    message: `${count} mídias → ${speed}x` 
-  };
+  return { success: count > 0, count, speed, message: `${count} mídias → ${speed}x` };
 }
 
-// ====================== DOWNLOAD AUTOMÁTICO ======================
-function startAutoRecording(isAudioOnly = false) {
-  // Tenta pegar tanto video quanto audio (Spotify usa audio)
-  let media = document.querySelector('video') || document.querySelector('audio');
-
+// ====================== GRAVAÇÃO INDEPENDENTE ======================
+function startIndependentRecording(isAudioOnly = false) {
+  const media = document.querySelector('video') || document.querySelector('audio');
   if (!media) {
     return { success: false, message: "Nenhum player encontrado" };
   }
 
-  if (currentRecorder) currentRecorder.stop();
+  // Para gravação anterior
+  if (recorder) recorder.stop();
 
-  recordedChunks = [];
+  chunks = [];
 
   try {
-    const stream = isAudioOnly 
-      ? new MediaStream(media.captureStream().getAudioTracks())
-      : media.captureStream();
-
-    currentRecorder = new MediaRecorder(stream, { 
-      mimeType: 'video/webm;codecs=vp9,opus' 
+    // Captura o stream original (sempre em 1x, independente da playbackRate)
+    const originalStream = media.captureStream();
+    
+    recorder = new MediaRecorder(originalStream, {
+      mimeType: 'video/webm;codecs=vp9,opus'
     });
 
-    currentRecorder.ondataavailable = e => {
-      if (e.data.size > 0) recordedChunks.push(e.data);
+    recorder.ondataavailable = e => {
+      if (e.data.size > 0) chunks.push(e.data);
     };
 
-    currentRecorder.onstop = () => {
-      if (recordedChunks.length === 0) return;
-      const blob = new Blob(recordedChunks, { type: 'video/webm' });
+    recorder.onstop = () => {
+      if (chunks.length === 0) return;
+      
+      const blob = new Blob(chunks, { type: 'video/webm' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `music_${Date.now()}.${isAudioOnly ? 'mp3' : 'webm'}`;
+      a.download = `recording_${Date.now()}.${isAudioOnly ? 'mp3' : 'webm'}`;
       a.click();
       URL.revokeObjectURL(url);
     };
 
-    currentRecorder.start(300);
+    recorder.start(300);
 
-    // Para automaticamente quando a música acabar
+    // Para automaticamente quando a mídia acabar
     media.onended = () => {
-      setTimeout(() => {
-        if (currentRecorder) currentRecorder.stop();
-      }, 1000);
+      setTimeout(() => { if (recorder) recorder.stop(); }, 1200);
     };
 
     return { 
       success: true, 
       message: isAudioOnly 
-        ? "Gravando Áudio... (baixa ao final)" 
-        : "Gravando... (baixa ao final)" 
+        ? "Gravando AUDIO em velocidade normal..." 
+        : "Gravando VIDEO em velocidade normal..." 
     };
 
   } catch (err) {
     console.error(err);
-    return { success: false, message: "Não foi possível iniciar gravação neste player" };
+    return { success: false, message: "Erro ao iniciar gravacao" };
   }
+}
+
+function stopCurrentRecording() {
+  if (recorder) {
+    recorder.stop();
+    recorder = null;
+    return { success: true, message: "Gravaçcao parada" };
+  }
+  return { success: false, message: "Nenhuma gravacao ativa" };
 }
 
 // ====================== LISTENER ======================
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "setSpeed") {
-    sendResponse(applySpeedToAllMedia(request.speed));
+    sendResponse(applySpeed(request.speed));
   } 
   else if (request.action === "downloadVideo") {
-    sendResponse(startAutoRecording(false));
+    sendResponse(startIndependentRecording(false));
   } 
   else if (request.action === "downloadAudio") {
-    sendResponse(startAutoRecording(true));
+    sendResponse(startIndependentRecording(true));
+  } 
+  else if (request.action === "stopRecording") {
+    sendResponse(stopCurrentRecording());
   }
 });
 
-// Observer + auto speed
+// Observer para manter velocidade
 const observer = new MutationObserver(() => {
   if (lastSpeed !== 1.0) {
     document.querySelectorAll('video, audio').forEach(m => {
