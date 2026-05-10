@@ -29,9 +29,7 @@ function applySpeed(speed) {
 // ====================== DOWNLOAD DIRETO ======================
 function downloadDirect(isAudioOnly) {
   const media = document.querySelector('video') || document.querySelector('audio');
-  if (!media) {
-    return { success: false, message: "Nenhum player encontrado" };
-  }
+  if (!media) return { success: false, message: "Nenhum player encontrado" };
 
   const src = media.currentSrc || media.src;
   if (src && src.length > 15) {
@@ -41,18 +39,18 @@ function downloadDirect(isAudioOnly) {
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    return { success: true, message: "Download iniciado" };
+    return { success: true, message: `⬇️ Download ${isAudioOnly ? 'Áudio' : 'Vídeo'} iniciado` };
   }
-
-  return { success: false, message: "Nao encontrou link direto" };
+  return { success: false, message: "Link direto nao encontrado" };
 }
 
-// ====================== GRAVAR E BAIXAR NO FINAL ======================
+// ====================== GRAVAR ======================
 function startRecording() {
   const media = document.querySelector('video') || document.querySelector('audio');
   if (!media) return { success: false, message: "Nenhum player encontrado" };
 
   if (recorder) recorder.stop();
+
   chunks = [];
 
   try {
@@ -61,24 +59,36 @@ function startRecording() {
     recorder.ondataavailable = e => chunks.push(e.data);
 
     recorder.onstop = () => {
-      const blob = new Blob(chunks, { type: 'video/webm' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `recording_${Date.now()}.webm`;
-      a.click();
-      URL.revokeObjectURL(url);
+      if (chunks.length > 0) {
+        const blob = new Blob(chunks, { type: 'video/webm' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `recording_${Date.now()}.webm`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+      recorder = null;
     };
 
     recorder.start(300);
 
     media.onended = () => setTimeout(() => recorder?.stop(), 1200);
 
-    return { success: true, message: "Gravando... Baixara automaticamente no final" };
+    return { success: true, message: "Gravando... Use 'Parar Gravacao' quando quiser" };
 
   } catch (e) {
-    return { success: false, message: "Nao foi possível gravar neste site" };
+    return { success: false, message: "Nao foi possível iniciar gravacao" };
   }
+}
+
+function stopRecording() {
+  if (recorder) {
+    recorder.stop();
+    recorder = null;
+    return { success: true, message: "Gravação parada" };
+  }
+  return { success: false, message: "Nenhuma gravação ativa" };
 }
 
 // ====================== LISTENER ======================
@@ -94,6 +104,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   } 
   else if (request.action === "downloadRecord") {
     sendResponse(startRecording());
+  } 
+  else if (request.action === "stopRecording") {
+    sendResponse(stopRecording());
   }
 });
 
@@ -105,4 +118,4 @@ const observer = new MutationObserver(() => {
 });
 observer.observe(document.body, { childList: true, subtree: true });
 
-console.log("Video Turbo");
+console.log("Video Turbo - Com botão Parar Gravação inteligente");

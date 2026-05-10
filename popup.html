@@ -17,11 +17,22 @@
       font-weight: bold; 
       margin: 6px 0; 
     }
+    .stop { 
+      background: #d62828; 
+      color: white; 
+      font-weight: bold; 
+      grid-column: span 2; 
+      margin: 8px 0;
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
     .status { margin-top: 12px; text-align: center; font-size: 14px; min-height: 24px; }
   </style>
 </head>
 <body>
-  <h1>Video Turbo</h1>
+  <h1>Video Turbo + Download/Gravacao</h1>
   
   <div class="grid">
     <button class="slow" id="speed025">0.25x</button>
@@ -35,6 +46,8 @@
   <button class="download" id="downloadDirectVideo">Video (Link Direto)</button>
   <button class="download" id="downloadDirectAudio">Audio (MP3)</button>
   <button class="download" id="downloadRecord">Gravar e Baixar no Final</button>
+  
+  <button class="stop" id="stopRecording" style="display: none;">Parar Gravacao</button>
 
   <button class="reset" id="reset">Voltar ao normal (1x)</button>
 
