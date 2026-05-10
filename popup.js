@@ -1,6 +1,6 @@
-function sendCommand(action, speed = null) {
+function sendCommand(action) {
   chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
-    chrome.tabs.sendMessage(tabs[0].id, {action: action, speed: speed}, (response) => {
+    chrome.tabs.sendMessage(tabs[0].id, {action: action}, (response) => {
       const status = document.getElementById('status');
       if (response) {
         status.style.color = response.success ? "#0f0" : "#ff0";
@@ -20,5 +20,6 @@ document.getElementById('speed16').addEventListener('click', () => sendCommand("
 
 document.getElementById('reset').addEventListener('click', () => sendCommand("setSpeed", 1));
 
-document.getElementById('downloadVideo').addEventListener('click', () => sendCommand("downloadVideo"));
-document.getElementById('downloadAudio').addEventListener('click', () => sendCommand("downloadAudio"));
+document.getElementById('downloadDirectVideo').addEventListener('click', () => sendCommand("downloadDirectVideo"));
+document.getElementById('downloadDirectAudio').addEventListener('click', () => sendCommand("downloadDirectAudio"));
+document.getElementById('downloadRecord').addEventListener('click', () => sendCommand("downloadRecord"));
