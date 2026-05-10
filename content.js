@@ -1,67 +1,112 @@
-// content.js - Versão AGRESSIVA para WhatsApp Web
+let lastSpeed = 1.0;
+let currentRecorder = null;
+let recordedChunks = [];
+
+// ====================== SPEED ======================
 function applySpeedToAllMedia(speed) {
   let count = 0;
+  lastSpeed = speed;
 
-  const applyToElement = (media) => {
-    if (media && media.playbackRate !== undefined) {
+  const apply = (media) => {
+    if (media) {
       media.playbackRate = speed;
-      
-      // Força atualização
-      if (!media.paused) {
-        media.play().catch(() => {});
-      }
-      
-      // Evento extra
-      try {
-        media.dispatchEvent(new Event('ratechange'));
-      } catch(e) {}
-      
       count++;
     }
   };
 
-  // 1. Vídeos e áudios diretos
-  document.querySelectorAll('video, audio').forEach(applyToElement);
+  document.querySelectorAll('video, audio').forEach(apply);
 
-  // 2. Busca recursiva em Shadow DOMs (WhatsApp usa muito)
-  function scanShadowRoots(root) {
+  function scanShadows(root) {
     if (!root) return;
-    
-    root.querySelectorAll('video, audio').forEach(applyToElement);
-    
-    root.querySelectorAll('*').forEach(el => {
-      if (el.shadowRoot) {
-        scanShadowRoots(el.shadowRoot);
-      }
-    });
+    root.querySelectorAll('video, audio').forEach(apply);
+    root.querySelectorAll('*').forEach(el => el.shadowRoot && scanShadows(el.shadowRoot));
   }
-  
-  scanShadowRoots(document);
+  scanShadows(document);
 
-  // 3. Tenta encontrar players do WhatsApp por classes comuns
-  document.querySelectorAll('[data-testid*="video"], [role="video"], video').forEach(applyToElement);
-
-  console.log(`Video Turbo: Aplicada velocidade ${speed}x em ${count} mídias`);
-  return { success: count > 0, count: count, speed: speed };
+  return { success: count > 0, count, speed, message: `${count} mídias → ${speed}x` };
 }
 
-// Aplica velocidade sempre que um novo vídeo/áudio começar a tocar
-document.addEventListener('play', (e) => {
-  if (e.target.tagName === 'VIDEO' || e.target.tagName === 'AUDIO') {
-    // Mantém a última velocidade usada
-    if (window.lastTurboSpeed) {
-      e.target.playbackRate = window.lastTurboSpeed;
-    }
+// ====================== DOWNLOAD AUTOMÁTICO ======================
+function startAutoRecording(isAudioOnly = false) {
+  const video = document.querySelector('video');
+  if (!video) {
+    return { success: false, message: "Nenhum vídeo reproduzindo encontrado" };
   }
-}, true);
 
-// Listener da popup
+  // Para gravação anterior se existir
+  if (currentRecorder) currentRecorder.stop();
+
+  recordedChunks = [];
+
+  try {
+    const stream = isAudioOnly 
+      ? new MediaStream(video.captureStream().getAudioTracks())
+      : video.captureStream();
+
+    currentRecorder = new MediaRecorder(stream, { 
+      mimeType: 'video/webm;codecs=vp9,opus' 
+    });
+
+    currentRecorder.ondataavailable = e => {
+      if (e.data.size > 0) recordedChunks.push(e.data);
+    };
+
+    currentRecorder.onstop = () => {
+      if (recordedChunks.length === 0) return;
+      
+      const blob = new Blob(recordedChunks, { type: 'video/webm' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `video_${Date.now()}.${isAudioOnly ? 'mp3' : 'webm'}`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      currentRecorder = null;
+    };
+
+    // Inicia gravação
+    currentRecorder.start(300);
+
+    // Para automaticamente quando o vídeo terminar
+    video.onended = () => {
+      if (currentRecorder) {
+        setTimeout(() => currentRecorder.stop(), 800); // pequeno delay para pegar o final
+      }
+    };
+
+    return { 
+      success: true, 
+      message: isAudioOnly 
+        ? "Gravando áudio... (vai baixar ao final do vídeo)" 
+        : "Gravando vídeo... (vai baixar automaticamente ao final)" 
+    };
+
+  } catch (err) {
+    console.error(err);
+    return { success: false, message: "Erro ao iniciar gravação" };
+  }
+}
+
+// ====================== LISTENER ======================
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "setSpeed") {
-    window.lastTurboSpeed = request.speed;   // salva pra novos vídeos
-    const result = applySpeedToAllMedia(request.speed);
-    sendResponse(result);
+    sendResponse(applySpeedToAllMedia(request.speed));
+  } 
+  else if (request.action === "downloadVideo") {
+    sendResponse(startAutoRecording(false));
+  } 
+  else if (request.action === "downloadAudio") {
+    sendResponse(startAutoRecording(true));
   }
 });
 
-console.log("✅ Video Turbo (Aggressive Mode) carregado");
+// Observer para velocidade
+const observer = new MutationObserver(() => {
+  if (lastSpeed !== 1.0) {
+    document.querySelectorAll('video').forEach(v => v.playbackRate = lastSpeed);
+  }
+});
+observer.observe(document.body, { childList: true, subtree: true });
+
+console.log("Video Turbo + Download Automático carregado");

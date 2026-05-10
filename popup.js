@@ -1,22 +1,24 @@
-function sendSpeed(speed) {
+function sendCommand(action, speed = null) {
   chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
-    chrome.tabs.sendMessage(tabs[0].id, {action: "setSpeed", speed: speed}, (response) => {
-      const statusEl = document.getElementById('status');
-      
-      if (response && response.success) {
-        statusEl.style.color = "#0f0";
-        statusEl.textContent = `aplicado ${response.count} midia(s) → ${response.speed}x`;
-      } else {
-        statusEl.style.color = "#ff0";
-        statusEl.textContent = `Nenhum player encontrado (reproduza o video primeiro)`;
+    chrome.tabs.sendMessage(tabs[0].id, {action: action, speed: speed}, (response) => {
+      const status = document.getElementById('status');
+      if (response) {
+        status.style.color = response.success ? "#0f0" : "#ff0";
+        status.textContent = response.message;
       }
     });
   });
 }
 
-// Botões...
-document.getElementById('speed2').addEventListener('click', () => sendSpeed(2));
-document.getElementById('speed4').addEventListener('click', () => sendSpeed(4));
-document.getElementById('speed8').addEventListener('click', () => sendSpeed(8));
-document.getElementById('speed16').addEventListener('click', () => sendSpeed(16));
-document.getElementById('reset').addEventListener('click', () => sendSpeed(1));
+// Velocidades
+document.getElementById('speed025').addEventListener('click', () => sendCommand("setSpeed", 0.25));
+document.getElementById('speed05').addEventListener('click', () => sendCommand("setSpeed", 0.5));
+document.getElementById('speed2').addEventListener('click', () => sendCommand("setSpeed", 2));
+document.getElementById('speed4').addEventListener('click', () => sendCommand("setSpeed", 4));
+document.getElementById('speed8').addEventListener('click', () => sendCommand("setSpeed", 8));
+document.getElementById('speed16').addEventListener('click', () => sendCommand("setSpeed", 16));
+
+document.getElementById('reset').addEventListener('click', () => sendCommand("setSpeed", 1));
+
+document.getElementById('downloadVideo').addEventListener('click', () => sendCommand("downloadVideo"));
+document.getElementById('downloadAudio').addEventListener('click', () => sendCommand("downloadAudio"));

@@ -2,32 +2,36 @@
 <html>
 <head>
   <style>
-    body { width: 220px; padding: 15px; font-family: Arial, sans-serif; }
+    body { width: 300px; padding: 15px; font-family: Arial, sans-serif; }
     h1 { font-size: 18px; margin: 0 0 15px 0; text-align: center; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     button {
-      width: 100%;
-      padding: 12px;
-      margin: 8px 0;
-      font-size: 16px;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
+      padding: 12px; font-size: 15px; border: none; border-radius: 8px; cursor: pointer;
     }
-    .btn-2x { background: #ffff44; color: white; }
-    .btn-4x { background: #ff4444; color: white; }
-    .btn-8x { background: #cc0000; color: white; }
-    .btn-16x { background: #cc0022; color: white; }
-    .btn-reset { background: #666; color: white; }
-    .status { margin-top: 10px; text-align: center; font-size: 14px; }
+    .fast { background: #e63939; color: white; }
+    .slow { background: #457b9d; color: white; }
+    .reset { background: #666; color: white; grid-column: span 2; }
+    .download { background: #2a9d8f; color: white; grid-column: span 2; font-weight: bold; margin: 6px 0; }
+    .stop { background: #d62828; color: white; grid-column: span 2; }
+    .status { margin-top: 10px; text-align: center; font-size: 14px; min-height: 22px; }
   </style>
 </head>
 <body>
   <h1>Video Turbo</h1>
-  <button class="btn-2x" id="speed2">2x</button>
-  <button class="btn-4x" id="speed4">4x</button>
-  <button class="btn-8x" id="speed8">8x</button>
-  <button class="btn-16x" id="speed16">16x</button>
-  <button class="btn-reset" id="reset">Voltar ao normal (1x)</button>
+  
+  <div class="grid">
+    <button class="slow" id="speed025">0.25x</button>
+    <button class="slow" id="speed05">0.5x</button>
+    <button class="fast" id="speed2">2x</button>
+    <button class="fast" id="speed4">4x</button>
+    <button class="fast" id="speed8">8x</button>
+    <button class="fast" id="speed16">16x</button>
+  </div>
+
+  <button class="download" id="downloadVideo">Baixar Vídeo (MP4)</button>
+  <button class="download" id="downloadAudio">Baixar Apenas Áudio</button>
+
+  <button class="reset" id="reset">Voltar ao normal (1x)</button>
 
   <div class="status" id="status"></div>
 
